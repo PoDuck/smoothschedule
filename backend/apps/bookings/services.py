@@ -138,7 +138,7 @@ def _calculate_resource_availability(
         business=business,
         resource=resource,
         start_time__lt=day_end,
-        end_time__gt=day_start
+        start_time__gte=day_start.replace(hour=0, minute=0, second=0)
     ).order_by("start_time")
 
     # Generate potential time slots from business hours
@@ -175,8 +175,10 @@ def _calculate_resource_availability(
 
         # Check blockers
         for blocker in blockers:
+            # Calculate blocker end time (blocker has duration_minutes, not end_time)
+            blocker_end = blocker.start_time + timedelta(minutes=blocker.duration_minutes)
             # Check if slot overlaps with blocker
-            if not (slot_end_time <= blocker.start_time or slot >= blocker.end_time):
+            if not (slot_end_time <= blocker.start_time or slot >= blocker_end):
                 is_available = False
                 break
 

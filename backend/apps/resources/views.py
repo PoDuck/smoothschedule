@@ -7,6 +7,7 @@ Implements endpoints from IMPLEMENTATION.md
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 
+from apps.core.permissions import OwnerOrManagerCanWrite
 from .models import Resource, Service
 from .serializers import ResourceSerializer, ServiceSerializer
 
@@ -32,7 +33,7 @@ class ResourceViewSet(viewsets.ModelViewSet):
 
     queryset = Resource.objects.all()  # Auto-filtered by TenantManager
     serializer_class = ResourceSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, OwnerOrManagerCanWrite]
 
     def perform_create(self, serializer):
         """Auto-assign current business to new resources."""
@@ -53,14 +54,14 @@ class ServiceViewSet(viewsets.ModelViewSet):
     - All queries automatically filtered by current business (via TenantManager)
     - Business automatically assigned on create
 
-    TODO: Implement role-based permissions
+    Permissions:
     - Owner/Manager can CRUD services
     - Staff/Customers can view services (read-only)
     """
 
     queryset = Service.objects.all()  # Auto-filtered by TenantManager
     serializer_class = ServiceSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, OwnerOrManagerCanWrite]
 
     def perform_create(self, serializer):
         """Auto-assign current business to new services."""

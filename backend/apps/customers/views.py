@@ -7,6 +7,7 @@ Implements endpoints from IMPLEMENTATION.md
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 
+from apps.core.permissions import OwnerOrManagerCanWrite, CustomerCanViewOwnData
 from .models import Customer, PaymentMethod
 from .serializers import CustomerSerializer, PaymentMethodSerializer
 
@@ -33,7 +34,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
 
     queryset = Customer.objects.all()  # Auto-filtered by TenantManager
     serializer_class = CustomerSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CustomerCanViewOwnData]
 
     def get_queryset(self):
         """
@@ -71,7 +72,7 @@ class PaymentMethodViewSet(viewsets.ModelViewSet):
 
     queryset = PaymentMethod.objects.all()
     serializer_class = PaymentMethodSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CustomerCanViewOwnData]
 
     def get_queryset(self):
         """

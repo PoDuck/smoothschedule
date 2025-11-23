@@ -9,6 +9,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.core.permissions import OwnerOrManagerCanWrite, StaffCanModifyOwnData
 from .models import Appointment, Blocker
 from .serializers import AppointmentSerializer, BlockerSerializer
 
@@ -30,7 +31,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
 
     queryset = Appointment.objects.all()  # Auto-filtered by TenantManager
     serializer_class = AppointmentSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, OwnerOrManagerCanWrite]
 
     def get_queryset(self):
         """
@@ -124,7 +125,7 @@ class BlockerViewSet(viewsets.ModelViewSet):
 
     queryset = Blocker.objects.all()  # Auto-filtered by TenantManager
     serializer_class = BlockerSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, StaffCanModifyOwnData]
 
     def perform_create(self, serializer):
         """Auto-assign current business to new blockers."""

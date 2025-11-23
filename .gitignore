@@ -42,11 +42,32 @@ static/
 
 # IDE
 .vscode/
-.idea/
 *.swp
 *.swo
 *~
 .DS_Store
+
+# PyCharm - ignore everything in .idea except shared configurations
+.idea/
+!.idea/runConfigurations/
+!.idea/inspectionProfiles/
+!.idea/*.iml
+!.idea/modules.xml
+!.idea/vcs.xml
+!.idea/misc.xml
+
+# But still ignore user-specific PyCharm files
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/usage.statistics.xml
+.idea/shelf/
+.idea/dictionaries/
+.idea/dataSources/
+.idea/dataSources.ids
+.idea/dataSources.local.xml
+.idea/sqlDataSources.xml
+.idea/dynamic.xml
+.idea/uiDesigner.xml
 
 # Testing
 .coverage

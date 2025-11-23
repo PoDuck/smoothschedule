@@ -70,7 +70,8 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 # AUTHENTICATION
 # ------------------------------------------------------------------------------
 AUTHENTICATION_BACKENDS = [
-    "django.contrib.auth.backends.ModelBackend",
+    "apps.core.auth.BusinessScopedAuthBackend",  # Multi-tenant auth (email + business)
+    "django.contrib.auth.backends.ModelBackend",  # Fallback for platform users
 ]
 
 AUTH_USER_MODEL = "core.User"
@@ -156,9 +157,12 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
-    "DEFAULT_RENDERER_CLASSES": ("rest_framework.renderers.JSONRenderer",),
+    "DEFAULT_RENDERER_CLASSES": (
+        "djangorestframework_camel_case.render.CamelCaseJSONRenderer",
+        "djangorestframework_camel_case.render.CamelCaseBrowsableAPIRenderer",
+    ),
     "DEFAULT_PARSER_CLASSES": (
-        "rest_framework.parsers.JSONParser",
+        "djangorestframework_camel_case.parser.CamelCaseJSONParser",
         "rest_framework.parsers.FormParser",
         "rest_framework.parsers.MultiPartParser",
     ),

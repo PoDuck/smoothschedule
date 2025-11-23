@@ -21,34 +21,47 @@ class CustomerViewSet(viewsets.ModelViewSet):
     - POST /api/v1/customers/ - Create customer
     - PATCH /api/v1/customers/{id}/ - Update customer
 
-    TODO: Implement permissions
+    Multi-tenancy:
+    - All queries automatically filtered by current business (via TenantManager)
+    - Business automatically assigned on create
+
+    TODO: Implement role-based permissions
     - Owner/Manager can CRUD customers
     - Staff can view customers (read-only)
     - Customers can view/update their own profile only
     """
 
-    queryset = Customer.objects.all()
+    queryset = Customer.objects.all()  # Auto-filtered by TenantManager
     serializer_class = CustomerSerializer
     permission_classes = [IsAuthenticated]
 
-    # TODO: Filter by request.business
-    # def get_queryset(self):
-    #     queryset = Customer.objects.filter(business=self.request.business)
-    #
-    #     # If customer role, only show their own profile
-    #     if self.request.user.role == 'customer':
-    #         queryset = queryset.filter(user=self.request.user)
-    #
-    #     return queryset
+    def get_queryset(self):
+        """
+        Filter customers based on user role.
 
-    # TODO: Auto-assign business on create
-    # def perform_create(self, serializer):
-    #     serializer.save(business=self.request.business)
+        - Owner/Manager: See all customers in their business
+        - Customer: See only their own profile
+        """
+        # Base queryset is already filtered by business via TenantManager
+        queryset = super().get_queryset()
+
+        # If customer role, only show their own profile
+        if self.request.user.role == 'customer':
+            queryset = queryset.filter(user=self.request.user)
+
+        return queryset
+
+    def perform_create(self, serializer):
+        """Auto-assign current business to new customers."""
+        serializer.save(business=self.request.business)
 
 
 class PaymentMethodViewSet(viewsets.ModelViewSet):
     """
     API endpoints for PaymentMethod model.
+
+    Multi-tenancy:
+    - Filtered by customer's business (via Customer foreign key)
 
     TODO: Integrate with Stripe
     - Create payment method via Stripe API
@@ -60,12 +73,21 @@ class PaymentMethodViewSet(viewsets.ModelViewSet):
     serializer_class = PaymentMethodSerializer
     permission_classes = [IsAuthenticated]
 
-    # TODO: Filter by customer
-    # def get_queryset(self):
-    #     if self.request.user.role == 'customer':
-    #         return PaymentMethod.objects.filter(
-    #             customer__user=self.request.user
-    #         )
-    #     return PaymentMethod.objects.filter(
-    #         customer__business=self.request.business
-    #     )
+    def get_queryset(self):
+        """
+        Filter payment methods based on user role.
+
+        - Customer: See only their own payment methods
+        - Owner/Manager: See all payment methods in their business
+        """
+        # PaymentMethod doesn't inherit from TenantModel
+        # It's related to Customer which is related to Business
+        if self.request.user.role == 'customer':
+            return PaymentMethod.objects.filter(
+                customer__user=self.request.user
+            )
+
+        # For owner/manager, filter by business via customer relationship
+        return PaymentMethod.objects.filter(
+            customer__business=self.request.business
+        )

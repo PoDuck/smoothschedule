@@ -21,22 +21,22 @@ class ResourceViewSet(viewsets.ModelViewSet):
     - PATCH /api/v1/resources/{id}/ - Update resource
     - DELETE /api/v1/resources/{id}/ - Delete resource
 
-    TODO: Implement permissions
+    Multi-tenancy:
+    - All queries automatically filtered by current business (via TenantManager)
+    - Business automatically assigned on create
+
+    TODO: Implement role-based permissions
     - Owner/Manager can CRUD resources
     - Staff/Customers can view resources (read-only)
     """
 
-    queryset = Resource.objects.all()
+    queryset = Resource.objects.all()  # Auto-filtered by TenantManager
     serializer_class = ResourceSerializer
     permission_classes = [IsAuthenticated]
 
-    # TODO: Filter by request.business
-    # def get_queryset(self):
-    #     return Resource.objects.filter(business=self.request.business)
-
-    # TODO: Auto-assign business on create
-    # def perform_create(self, serializer):
-    #     serializer.save(business=self.request.business)
+    def perform_create(self, serializer):
+        """Auto-assign current business to new resources."""
+        serializer.save(business=self.request.business)
 
 
 class ServiceViewSet(viewsets.ModelViewSet):
@@ -49,19 +49,19 @@ class ServiceViewSet(viewsets.ModelViewSet):
     - PATCH /api/v1/services/{id}/ - Update service
     - DELETE /api/v1/services/{id}/ - Delete service
 
-    TODO: Implement permissions
+    Multi-tenancy:
+    - All queries automatically filtered by current business (via TenantManager)
+    - Business automatically assigned on create
+
+    TODO: Implement role-based permissions
     - Owner/Manager can CRUD services
     - Staff/Customers can view services (read-only)
     """
 
-    queryset = Service.objects.all()
+    queryset = Service.objects.all()  # Auto-filtered by TenantManager
     serializer_class = ServiceSerializer
     permission_classes = [IsAuthenticated]
 
-    # TODO: Filter by request.business
-    # def get_queryset(self):
-    #     return Service.objects.filter(business=self.request.business)
-
-    # TODO: Auto-assign business on create
-    # def perform_create(self, serializer):
-    #     serializer.save(business=self.request.business)
+    def perform_create(self, serializer):
+        """Auto-assign current business to new services."""
+        serializer.save(business=self.request.business)

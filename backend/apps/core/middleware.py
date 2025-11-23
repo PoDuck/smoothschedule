@@ -3,6 +3,7 @@ Multi-tenancy middleware for subdomain-based tenant resolution.
 
 Extracts Business from subdomain (acme.smoothschedule.com) or custom domain (acmeauto.com).
 Attaches business to request object for use in views/serializers.
+Stores business in thread-local storage for automatic query filtering via TenantManager.
 """
 
 from django.conf import settings
@@ -10,6 +11,7 @@ from django.http import Http404
 from django.utils.functional import SimpleLazyObject
 
 from .models import Business
+from .threadlocals import set_current_business, clear_current_business
 
 
 def get_business_from_request(request):
@@ -60,10 +62,15 @@ class TenantMiddleware:
     """
     Middleware that resolves current business from request and attaches to request.
 
+    This middleware:
+    1. Extracts business from subdomain/domain
+    2. Attaches business to request object (request.business)
+    3. Stores business in thread-local storage for TenantManager to use
+    4. Clears thread-local after request completes
+
     Usage in views:
         business = request.business
 
-    TODO: Store business in thread-local for use in managers/querysets
     TODO: Add custom domain support (Phase 2)
     """
 
@@ -74,21 +81,16 @@ class TenantMiddleware:
         # Use SimpleLazyObject to defer business lookup until accessed
         request.business = SimpleLazyObject(lambda: get_business_from_request(request))
 
-        # TODO: Set thread-local for use in TenantManager
-        # _thread_locals.business = request.business
+        try:
+            # Force evaluation of lazy object and store in thread-local
+            # This makes the business available to TenantManager for automatic filtering
+            business = request.business
+            set_current_business(business)
 
-        response = self.get_response(request)
+            response = self.get_response(request)
 
-        # TODO: Clear thread-local after request
-        # _thread_locals.business = None
-
-        return response
-
-
-# TODO: Implement thread-local storage for business context
-# import threading
-# _thread_locals = threading.local()
-#
-# def get_current_business():
-#     """Get current business from thread-local storage"""
-#     return getattr(_thread_locals, 'business', None)
+            return response
+        finally:
+            # Always clear thread-local after request (even if exception occurs)
+            # This prevents business from leaking between requests in same thread
+            clear_current_business()

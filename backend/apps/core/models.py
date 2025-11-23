@@ -162,8 +162,20 @@ class TenantModel(models.Model):
     Automatically adds business FK and ensures queries are scoped to business.
     All models that store business data should inherit from this.
 
-    TODO: Add manager that automatically filters by request.business
+    Managers:
+        - objects: Automatically filters by current business (from thread-local)
+        - objects_unscoped: Bypasses business filtering (use with caution!)
+
+    Example:
+        class Appointment(TenantModel):
+            customer = models.ForeignKey(User, on_delete=models.CASCADE)
+            # ...
+
+        # In a view (with TenantMiddleware running):
+        Appointment.objects.all()  # Only current business's appointments
+        Appointment.objects_unscoped.all()  # All appointments (admin only!)
     """
+    from .managers import TenantManager, TenantManagerUnscoped
 
     business = models.ForeignKey(
         Business,
@@ -172,21 +184,14 @@ class TenantModel(models.Model):
         help_text=_("Business this record belongs to")
     )
 
+    # Default manager: automatically scoped to current business
+    objects = TenantManager()
+
+    # Unscoped manager: for admin operations that need cross-business access
+    objects_unscoped = TenantManagerUnscoped()
+
     class Meta:
         abstract = True
         indexes = [
             models.Index(fields=["business"]),
         ]
-
-    # TODO: Implement custom manager for automatic business filtering
-    # objects = TenantManager()
-
-
-# TODO: Implement TenantManager
-# class TenantManager(models.Manager):
-#     """Manager that automatically filters querysets by current business"""
-#
-#     def get_queryset(self):
-#         # Get current business from thread-local storage set by middleware
-#         # Filter all queries by business automatically
-#         pass

@@ -23,40 +23,46 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     - POST /api/v1/appointments/ - Create appointment
     - PATCH /api/v1/appointments/{id}/ - Update appointment (drag-and-drop)
 
-    TODO: Implement scheduler-specific endpoints
-    - GET /api/v1/booking/availability/ - Available time slots
-      Input: service_id, date, timezone
-      Output: ["09:00", "09:30", ...]
-      Logic: Server-side calculation considering Resources, Blockers, Business Hours
+    Multi-tenancy:
+    - All queries automatically filtered by current business (via TenantManager)
+    - Business automatically assigned on create
     """
 
-    queryset = Appointment.objects.all()
+    queryset = Appointment.objects.all()  # Auto-filtered by TenantManager
     serializer_class = AppointmentSerializer
     permission_classes = [IsAuthenticated]
 
-    # TODO: Implement filtering by date range and resources
-    # def get_queryset(self):
-    #     queryset = Appointment.objects.filter(business=self.request.business)
-    #
-    #     # Filter by date range (for scheduler view)
-    #     start_date = self.request.query_params.get('start_date')
-    #     end_date = self.request.query_params.get('end_date')
-    #     if start_date and end_date:
-    #         queryset = queryset.filter(
-    #             start_time__gte=start_date,
-    #             start_time__lte=end_date
-    #         )
-    #
-    #     # Filter by resources (for scheduler view)
-    #     resource_ids = self.request.query_params.getlist('resource_ids')
-    #     if resource_ids:
-    #         queryset = queryset.filter(resource_id__in=resource_ids)
-    #
-    #     return queryset
+    def get_queryset(self):
+        """
+        Filter appointments by date range and resources.
 
-    # TODO: Auto-assign business on create
-    # def perform_create(self, serializer):
-    #     serializer.save(business=self.request.business)
+        Query params:
+        - start_date: ISO date string (YYYY-MM-DD)
+        - end_date: ISO date string (YYYY-MM-DD)
+        - resource_ids: Comma-separated list of resource IDs
+        """
+        # Base queryset is already filtered by business via TenantManager
+        queryset = super().get_queryset()
+
+        # Filter by date range (for scheduler view)
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+        if start_date and end_date:
+            queryset = queryset.filter(
+                start_time__gte=start_date,
+                start_time__lte=end_date
+            )
+
+        # Filter by resources (for scheduler view)
+        resource_ids = self.request.query_params.getlist('resource_ids')
+        if resource_ids:
+            queryset = queryset.filter(resource_id__in=resource_ids)
+
+        return queryset
+
+    def perform_create(self, serializer):
+        """Auto-assign current business to new appointments."""
+        serializer.save(business=self.request.business)
 
     @action(detail=False, methods=["get"], url_path="availability")
     def get_availability(self, request):
@@ -107,19 +113,19 @@ class BlockerViewSet(viewsets.ModelViewSet):
     - PATCH /api/v1/blockers/{id}/ - Update blocker
     - DELETE /api/v1/blockers/{id}/ - Delete blocker
 
-    TODO: Implement permissions
+    Multi-tenancy:
+    - All queries automatically filtered by current business (via TenantManager)
+    - Business automatically assigned on create
+
+    TODO: Implement role-based permissions
     - Owner/Manager can CRUD blockers
-    - Staff can create blockers for themselves
+    - Staff can create blockers for themselves only
     """
 
-    queryset = Blocker.objects.all()
+    queryset = Blocker.objects.all()  # Auto-filtered by TenantManager
     serializer_class = BlockerSerializer
     permission_classes = [IsAuthenticated]
 
-    # TODO: Filter by request.business
-    # def get_queryset(self):
-    #     return Blocker.objects.filter(business=self.request.business)
-
-    # TODO: Auto-assign business on create
-    # def perform_create(self, serializer):
-    #     serializer.save(business=self.request.business)
+    def perform_create(self, serializer):
+        """Auto-assign current business to new blockers."""
+        serializer.save(business=self.request.business)

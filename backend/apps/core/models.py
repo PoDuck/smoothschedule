@@ -5,9 +5,11 @@ Matches api-schema.ts TypeScript interfaces from the frontend.
 """
 
 import uuid
-from django.contrib.auth.models.AbstractUser
+from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+
+from .managers import TenantManager, TenantManagerUnscoped
 
 
 class Business(models.Model):
@@ -175,7 +177,6 @@ class TenantModel(models.Model):
         Appointment.objects.all()  # Only current business's appointments
         Appointment.objects_unscoped.all()  # All appointments (admin only!)
     """
-    from .managers import TenantManager, TenantManagerUnscoped
 
     business = models.ForeignKey(
         Business,

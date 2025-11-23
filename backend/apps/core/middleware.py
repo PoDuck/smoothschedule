@@ -41,16 +41,19 @@ def get_business_from_request(request):
     domain_suffix = settings.TENANT_DOMAIN_SUFFIX  # e.g., ".smoothschedule.com"
 
     if not host.endswith(domain_suffix):
-        # Not a tenant subdomain (could be platform subdomain or invalid)
-        platform_subdomain = settings.PLATFORM_SUBDOMAIN
-        if host.startswith(platform_subdomain):
-            # Platform admin console - no business
-            return None
+        # Not using platform domain - invalid request
         raise Http404("Invalid domain")
 
     # Extract subdomain from host
     subdomain = host.replace(domain_suffix, "")
 
+    # Check if this is the platform subdomain
+    platform_subdomain = settings.PLATFORM_SUBDOMAIN
+    if subdomain == platform_subdomain:
+        # Platform admin console - no business
+        return None
+
+    # Look up business by subdomain
     try:
         business = Business.objects.get(subdomain=subdomain)
         return business

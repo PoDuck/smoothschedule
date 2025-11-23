@@ -131,9 +131,9 @@ class CustomerCanViewOwnData(permissions.BasePermission):
         # Customers can only view their own data
         if request.user.role == "customer":
             # Check if object has customer or user attribute
-            if hasattr(obj, "customer"):
+            if hasattr(obj, "customer") and obj.customer is not None:
                 return obj.customer == request.user
-            if hasattr(obj, "user"):
+            if hasattr(obj, "user") and obj.user is not None:
                 return obj.user == request.user
 
         # Staff/resources have limited access (implement separately if needed)

@@ -21,7 +21,7 @@
       <excludeFolder url="file://$MODULE_DIR$/backend/media" />
       <excludeFolder url="file://$MODULE_DIR$/backend/htmlcov" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.11 (smoothschedule)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Remote Python 3.11 Docker Compose (django at [/home/poduck/PycharmProjects/schedule/docker-compose.yml])" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PyDocumentationSettings">

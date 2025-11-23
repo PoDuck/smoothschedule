@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=smoothschedule
+      - POSTGRES_USER=smoothschedule
+      - POSTGRES_PASSWORD=smoothschedule
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  django:
+    build:
+      context: ./backend
+      dockerfile: compose/local/django/Dockerfile
+    command: /start
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgres://smoothschedule:smoothschedule@postgres:5432/smoothschedule
+      - REDIS_URL=redis://redis:6379/0
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=smoothschedule
+      - POSTGRES_USER=smoothschedule
+      - POSTGRES_PASSWORD=smoothschedule
+      - DJANGO_SETTINGS_MODULE=config.settings.local
+      - DJANGO_SECRET_KEY=local-development-key-change-in-production
+    depends_on:
+      - postgres
+      - redis
+
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: compose/local/django/Dockerfile
+    command: celery -A config.celery_app worker -l INFO
+    volumes:
+      - ./backend:/app
+    environment:
+      - DATABASE_URL=postgres://smoothschedule:smoothschedule@postgres:5432/smoothschedule
+      - REDIS_URL=redis://redis:6379/0
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=smoothschedule
+      - POSTGRES_USER=smoothschedule
+      - POSTGRES_PASSWORD=smoothschedule
+      - DJANGO_SETTINGS_MODULE=config.settings.local
+    depends_on:
+      - postgres
+      - redis
+
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: compose/local/django/Dockerfile
+    command: celery -A config.celery_app beat -l INFO
+    volumes:
+      - ./backend:/app
+    environment:
+      - DATABASE_URL=postgres://smoothschedule:smoothschedule@postgres:5432/smoothschedule
+      - REDIS_URL=redis://redis:6379/0
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=smoothschedule
+      - POSTGRES_USER=smoothschedule
+      - POSTGRES_PASSWORD=smoothschedule
+      - DJANGO_SETTINGS_MODULE=config.settings.local
+    depends_on:
+      - postgres
+      - redis
+
+volumes:
+  postgres_data:

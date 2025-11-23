@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  django:
+    build:
+      context: ./backend
+      dockerfile: compose/production/django/Dockerfile
+    command: /start
+    env_file:
+      - ./backend/.env.production
+    depends_on:
+      - redis
+
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: compose/production/django/Dockerfile
+    command: celery -A config.celery_app worker -l INFO
+    env_file:
+      - ./backend/.env.production
+    depends_on:
+      - redis
+
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: compose/production/django/Dockerfile
+    command: celery -A config.celery_app beat -l INFO
+    env_file:
+      - ./backend/.env.production
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./backend/staticfiles:/usr/share/nginx/html/static
+      - ./backend/media:/usr/share/nginx/html/media
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - django
+    restart: unless-stopped
+
+# Note: For production, use managed PostgreSQL (DigitalOcean, AWS RDS, etc.)
+# Connection configured via DATABASE_URL in .env.production

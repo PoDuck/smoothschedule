@@ -196,3 +196,95 @@ class TenantModel(models.Model):
         indexes = [
             models.Index(fields=["business"]),
         ]
+
+
+class BusinessHours(models.Model):
+    """
+    Operating hours for a business.
+
+    Defines when a business is open for appointments on each day of the week.
+    Supports split shifts (e.g., 9am-12pm, 1pm-5pm).
+
+    Example:
+        # Monday: 9am - 5pm
+        BusinessHours.objects.create(
+            business=acme,
+            day_of_week=0,
+            open_time="09:00:00",
+            close_time="17:00:00",
+            is_closed=False
+        )
+
+        # Sunday: Closed
+        BusinessHours.objects.create(
+            business=acme,
+            day_of_week=6,
+            is_closed=True
+        )
+    """
+
+    DAYS_OF_WEEK = [
+        (0, _("Monday")),
+        (1, _("Tuesday")),
+        (2, _("Wednesday")),
+        (3, _("Thursday")),
+        (4, _("Friday")),
+        (5, _("Saturday")),
+        (6, _("Sunday")),
+    ]
+
+    business = models.ForeignKey(
+        Business,
+        on_delete=models.CASCADE,
+        related_name="business_hours"
+    )
+    day_of_week = models.IntegerField(
+        _("day of week"),
+        choices=DAYS_OF_WEEK,
+        help_text=_("0=Monday, 6=Sunday")
+    )
+    open_time = models.TimeField(
+        _("opening time"),
+        null=True,
+        blank=True,
+        help_text=_("Time business opens (e.g., 09:00:00)")
+    )
+    close_time = models.TimeField(
+        _("closing time"),
+        null=True,
+        blank=True,
+        help_text=_("Time business closes (e.g., 17:00:00)")
+    )
+    is_closed = models.BooleanField(
+        _("closed"),
+        default=False,
+        help_text=_("Check if business is closed this day")
+    )
+
+    class Meta:
+        verbose_name = _("business hours")
+        verbose_name_plural = _("business hours")
+        ordering = ["day_of_week", "open_time"]
+        indexes = [
+            models.Index(fields=["business", "day_of_week"]),
+        ]
+
+    def __str__(self):
+        day_name = dict(self.DAYS_OF_WEEK)[self.day_of_week]
+        if self.is_closed:
+            return f"{self.business.name} - {day_name}: Closed"
+        return f"{self.business.name} - {day_name}: {self.open_time} - {self.close_time}"
+
+    def clean(self):
+        """Validate business hours."""
+        from django.core.exceptions import ValidationError
+
+        if not self.is_closed:
+            if not self.open_time or not self.close_time:
+                raise ValidationError(
+                    _("Open time and close time are required when not closed")
+                )
+            if self.open_time >= self.close_time:
+                raise ValidationError(
+                    _("Close time must be after open time")
+                )

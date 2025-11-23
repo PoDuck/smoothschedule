@@ -4,14 +4,17 @@ API views for Appointment and Blocker models.
 Implements critical endpoints from IMPLEMENTATION.md
 """
 
+from datetime import datetime
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.core.permissions import OwnerOrManagerCanWrite, StaffCanModifyOwnData
+from apps.resources.models import Service
 from .models import Appointment, Blocker
 from .serializers import AppointmentSerializer, BlockerSerializer
+from .services import calculate_availability
 
 
 class AppointmentViewSet(viewsets.ModelViewSet):
@@ -71,37 +74,85 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         Get available time slots for booking.
 
         Query params:
-        - service_id: UUID
-        - date: YYYY-MM-DD
-        - timezone: e.g., 'America/New_York'
+        - service_id: UUID (required)
+        - date: YYYY-MM-DD (required)
+        - resource_id: UUID (optional - if not provided, checks all resources)
+        - timezone: e.g., 'America/New_York' (optional, defaults to UTC)
 
         Returns:
         - List of available time slots: ["09:00", "09:30", "10:00", ...]
 
-        TODO: Implement availability calculation logic
+        Algorithm:
         - Get service duration
-        - Get business hours for date
-        - Get all appointments for date
-        - Get all blockers for date
+        - Get business hours for the day of week
+        - Get all appointments and blockers for date
         - Calculate free slots considering:
           - Resource availability
           - Existing appointments
           - Blockers (lunch, breaks)
-          - Buffer times
           - Business hours
         """
-        # service_id = request.query_params.get('service_id')
-        # date = request.query_params.get('date')
-        # timezone = request.query_params.get('timezone')
+        # Validate required parameters
+        service_id = request.query_params.get('service_id')
+        date_str = request.query_params.get('date')
 
-        # TODO: Implement availability calculation
-        return Response(
-            {
-                "error": "Availability calculation not yet implemented",
-                "todo": "See IMPLEMENTATION.md for requirements"
-            },
-            status=status.HTTP_501_NOT_IMPLEMENTED
-        )
+        if not service_id or not date_str:
+            return Response(
+                {
+                    "error": "Missing required parameters",
+                    "required": ["service_id", "date"]
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Get optional parameters
+        resource_id = request.query_params.get('resource_id')
+        timezone_name = request.query_params.get('timezone', 'UTC')
+
+        try:
+            # Parse date
+            date = datetime.strptime(date_str, "%Y-%m-%d").date()
+
+            # Get service
+            service = Service.objects.get(
+                id=service_id,
+                business=request.business
+            )
+
+            # Calculate availability
+            available_slots = calculate_availability(
+                business=request.business,
+                service=service,
+                date=date,
+                resource_id=resource_id,
+                timezone_name=timezone_name
+            )
+
+            return Response({
+                "date": date_str,
+                "service": {
+                    "id": str(service.id),
+                    "name": service.name,
+                    "duration": service.duration_minutes
+                },
+                "availableSlots": available_slots
+            })
+
+        except Service.DoesNotExist:
+            return Response(
+                {"error": "Service not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except ValueError as e:
+            return Response(
+                {"error": f"Invalid date format: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Error calculating availability: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class BlockerViewSet(viewsets.ModelViewSet):

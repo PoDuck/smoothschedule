@@ -27,90 +27,146 @@ This document serves as a comprehensive guide for AI assistants (like Claude) wo
 
 ## Project Status
 
-**Current State:** Initial setup phase
+**Current State:** Two-repository architecture with Django backend
 **Last Updated:** 2025-11-23
 
-This is a new repository. The codebase structure and technology stack will be defined as development progresses.
+This repository contains the **Django backend** for SmoothSchedule, a multi-tenant SaaS scheduling platform. The React frontend is maintained separately in the `SmoothScheduleReact` repository and managed via Google AI Studio.
 
 ### Key Considerations for AI Assistants:
-- This is a greenfield project - establish good patterns early
-- Ask for clarification on architecture decisions before implementing
-- Document decisions and rationale as the project evolves
-- Update this CLAUDE.md file as the project structure solidifies
+- This is the **backend only** - frontend is in a separate repository
+- The `api-schema.ts` file is the **source of truth** for the API contract
+- Always sync changes to the API contract between repositories
+- Follow the handoff protocol when API changes are needed
+- This repository is managed with Claude Code for backend development
 
 ---
 
 ## Technology Stack
 
-**To be determined.** Update this section once the tech stack is chosen.
+### Backend (This Repository)
+- **Framework:** Django 5.x with Django REST Framework (DRF)
+- **Language:** Python 3.11+
+- **Database:** PostgreSQL (production), SQLite (development)
+- **Authentication:** JWT (djangorestframework-simplejwt)
+- **API:** REST API following the contract in `api-schema.ts`
+- **Multi-tenancy:** Subdomain-based tenant resolution
 
-### Potential Stack Options:
-- **Frontend:** React, Vue, Angular, Svelte, or other modern framework
-- **Backend:** Node.js, Python (Django/Flask/FastAPI), Ruby on Rails, Go, etc.
-- **Database:** PostgreSQL, MySQL, MongoDB, SQLite, etc.
-- **Deployment:** Docker, Kubernetes, cloud platforms (AWS, GCP, Azure)
+### Frontend (Separate Repository: `SmoothScheduleReact`)
+- **Framework:** React 19.2 with TypeScript (strict mode)
+- **Build Tool:** Vite
+- **Styling:** Tailwind CSS (dark mode support)
+- **Routing:** React Router v6
+- **Icons:** Lucide React
+- **Charts:** Recharts
+- **AI:** Google Gemini API integration
+- **Repository:** Managed via Google AI Studio
+
+### Infrastructure
+- **Deployment:** TBD (Docker, cloud platforms)
+- **CI/CD:** GitHub Actions (TBD)
 
 ---
 
 ## Project Structure
 
-**Current Structure:** Empty repository
+### Two-Repository Architecture
 
-### Recommended Structure (update as implemented):
+This project uses a **two-repository strategy** to leverage the strengths of different AI tools:
 
+**Repository 1: `smoothschedule` (This Repo)** - Backend (Claude Code)
 ```
 smoothschedule/
-├── .git/                    # Git repository metadata
-├── .github/                 # GitHub workflows, issue templates, etc.
-│   └── workflows/          # CI/CD pipeline definitions
-├── src/                     # Source code
-│   ├── frontend/           # Frontend application
-│   ├── backend/            # Backend application/API
-│   ├── shared/             # Shared code between frontend/backend
-│   └── ...
-├── tests/                   # Test files
-│   ├── unit/               # Unit tests
-│   ├── integration/        # Integration tests
-│   └── e2e/                # End-to-end tests
-├── docs/                    # Documentation
-├── scripts/                 # Build/deployment scripts
-├── config/                  # Configuration files
-├── .gitignore              # Git ignore patterns
-├── README.md               # Project README
-├── CLAUDE.md               # This file - AI assistant guide
-├── CONTRIBUTING.md         # Contribution guidelines
-└── LICENSE                 # License information
+├── backend/                 # Django project
+│   ├── config/             # Django settings
+│   ├── apps/               # Django apps
+│   │   ├── core/          # Multi-tenancy, auth
+│   │   ├── bookings/      # Appointments, availability
+│   │   ├── resources/     # Resources, blockers
+│   │   ├── customers/     # Customer management
+│   │   └── payments/      # Payment processing
+│   ├── manage.py
+│   └── requirements.txt
+├── docs/                    # API documentation
+├── api-schema.ts           # **THE CONTRACT** (synced from frontend)
+├── IMPLEMENTATION.md       # API implementation guide
+├── HANDOFF.md              # Cross-repo sync protocol
+├── CLAUDE.md               # This file
+├── README.md
+└── .gitignore
 ```
+
+**Repository 2: `SmoothScheduleReact`** - Frontend (Google AI Studio)
+```
+SmoothScheduleReact/
+├── components/             # React components
+├── pages/                  # Route pages
+├── layouts/                # Layout wrappers
+├── api-schema.ts          # **THE CONTRACT** (source of truth)
+├── types.ts               # UI-specific types
+├── mockData.ts            # Development data
+├── App.tsx                # Main application
+├── CLAUDE.md              # Frontend guide
+├── IMPLEMENTATION.md      # API requirements
+└── package.json
+```
+
+### The Contract: `api-schema.ts`
+
+This TypeScript file defines all data structures exchanged between frontend and backend. It must be kept in sync between both repositories using the handoff protocol (see `HANDOFF.md`).
 
 ---
 
 ## Development Workflows
 
-### Setting Up Development Environment
+### Two-Repository Workflow
+
+This project uses **separate repositories** for frontend and backend development:
+
+- **Frontend:** Edited via Google AI Studio (SmoothScheduleReact repo)
+- **Backend:** Edited via Claude Code (this repo)
+- **Contract:** `api-schema.ts` serves as the bridge between them
+
+**See `HANDOFF.md` for detailed sync protocol.**
+
+### Setting Up Backend Development Environment
 
 1. **Clone the repository:**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/PoDuck/smoothschedule.git
    cd smoothschedule
    ```
 
-2. **Install dependencies:**
+2. **Create virtual environment:**
    ```bash
-   # Update with actual commands once tech stack is chosen
-   # e.g., npm install, pip install -r requirements.txt, etc.
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
-3. **Configure environment:**
+3. **Install dependencies:**
    ```bash
-   # Copy example environment file
-   # cp .env.example .env
-   # Edit .env with your local configuration
+   pip install -r backend/requirements.txt
    ```
 
-4. **Run the application:**
+4. **Configure environment:**
    ```bash
-   # Update with actual commands
-   # e.g., npm run dev, python manage.py runserver, etc.
+   cp backend/.env.example backend/.env
+   # Edit backend/.env with your database settings, secret key, etc.
+   ```
+
+5. **Run migrations:**
+   ```bash
+   cd backend
+   python manage.py migrate
+   ```
+
+6. **Create superuser:**
+   ```bash
+   python manage.py createsuperuser
+   ```
+
+7. **Run development server:**
+   ```bash
+   python manage.py runserver
    ```
 
 ### Development Branch Strategy
@@ -166,7 +222,17 @@ smoothschedule/
 
 ### Language-Specific Conventions
 
-**To be added once the tech stack is determined.**
+**Python/Django:**
+- Follow PEP 8 style guide
+- Use `black` for code formatting (line length: 100)
+- Use `isort` for import sorting
+- Use `flake8` for linting
+- Type hints for function signatures (Python 3.11+)
+- Docstrings for all public functions, classes, and modules
+- Django models: Use `verbose_name` and `help_text`
+- Django views: Use class-based views (ViewSets for DRF)
+- Queries: Always filter by tenant to ensure data isolation
+- Naming: `snake_case` for functions/variables, `PascalCase` for classes
 
 ### Code Formatting
 
